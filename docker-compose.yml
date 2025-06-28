@@ -1,3 +1,9 @@
+volumes:
+  db-product-data:
+  db-currency-data:
+  db-user-data:
+  db-order-data:
+
 services:
 
   # -------------------------------
@@ -7,8 +13,28 @@ services:
       context: ./discovery-service
     ports:
       - "8761:8761"
-    networks:
-      - spring-net
+    
+  # -------------------------------
+  config-service:
+    image: config-service:latest
+    build:
+      context: ./config-service
+    depends_on:
+      - discovery-service
+    environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka
+  
+  # -------------------------------
+  greatin-service:
+    image: greatin-service:latest
+    build:
+      context: ./greatin-service
+    depends_on:
+      - discovery-service
+      - config-service
+    environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-service:8888
 
   # -------------------------------
   db-currency:
@@ -17,9 +43,9 @@ services:
       POSTGRES_DB: db_currency
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    networks:
-      - spring-net
-
+    volumes:
+      - db-currency-data:/var/lib/postgresql/data
+      
   currency-service:
     image: currency-service:latest
     build:
@@ -32,9 +58,7 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka
-    networks:
-      - spring-net
-
+    
   # -------------------------------
   db-product:
     image: postgres:16
@@ -42,8 +66,9 @@ services:
       POSTGRES_DB: db_product
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    networks:
-      - spring-net
+    volumes:
+      - db-product-data:/var/lib/postgresql/data
+    
   product-service:
     image: product-service:latest
     build:
@@ -57,9 +82,52 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka
-    networks:
-      - spring-net
-
+  # -------------------------------
+  db-user:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: db_user
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-user-data:/var/lib/postgresql/data
+    
+  auth-service:
+    image: auth-service:latest
+    build:
+      context: ./auth-service
+    depends_on:
+      - discovery-service
+      - db-user
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-user:5432/db_user
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka
+    
+  # -------------------------------
+  db-order:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: db_order
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-order-data:/var/lib/postgresql/data
+    
+  order-service:
+    image: order-service:latest
+    build:
+      context: ./order-service
+    depends_on:
+      - discovery-service
+      - db-order
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-order:5432/db_order
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka
+    
   # -------------------------------
   gateway-service:
     image: gateway-service:latest
@@ -70,11 +138,6 @@ services:
     depends_on:
       - discovery-service
     environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
-    networks:
-      - spring-net
-
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-service:8761/eureka
+    
 # -------------------------------
-networks:
-  spring-net:
-    driver: bridge

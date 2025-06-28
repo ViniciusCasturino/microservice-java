@@ -1,25 +1,19 @@
-package br.edu.atitus.product_service.entities;
+package br.edu.atitus.product_service.dtos;
 
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "tb_product")
-public class ProductEntity {
+public class ProductDTO {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	@Column(name = "description")
 	private String description_product;
-	@Column(name = "brand")
 	private String brand_product;
-	@Column(name = "model")
 	private String model_product;
-	@Column(name = "price")
 	private double price_product;
-	@Column(name = "currency")
 	private String currency_product;
-	@Column(name = "stock")
 	private Integer stock_product;
 
 	@Column(name = "image_url")
